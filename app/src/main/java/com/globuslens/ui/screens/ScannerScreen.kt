@@ -1,210 +1,171 @@
 package com.globuslens.ui.screens
 
-import android.Manifest
 import android.graphics.Bitmap
-import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
-import androidx.camera.view.CameraController
-import androidx.camera.view.LifecycleCameraController
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
-import com.google.accompanist.permissions.*
-import com.globuslens.ui.components.CameraPreview
 import com.globuslens.ui.components.BottomNavBar
+import com.globuslens.ui.components.CameraPreview
+import com.globuslens.utils.Resource
 import com.globuslens.viewmodel.ScannerViewModel
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.concurrent.Executor
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.PermissionState
+import com.google.accompanist.permissions.PermissionStatus
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ScannerScreen(
     navController: NavController,
-    viewModel: ScannerViewModel = hiltViewModel()
+    viewModel: ScannerViewModel,
+    modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
+    val cameraPermissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
+    val scanState by viewModel.scanState
+    var showPermissionDialog by remember { mutableStateOf(false) }
 
-    var showTranslationDialog by remember { mutableStateOf(false) }
-    var currentScannedText by remember { mutableStateOf("") }
-    val recognizedText by viewModel.recognizedText.collectAsState()
-
-    LaunchedEffect(recognizedText) {
-        if (recognizedText.isNotEmpty()) {
-            currentScannedText = recognizedText
-            showTranslationDialog = true
+    LaunchedEffect(cameraPermissionState.status) {
+        if (cameraPermissionState.status is PermissionStatus.Denied &&
+            !(cameraPermissionState.status as PermissionStatus.Denied).shouldShowRationale) {
+            showPermissionDialog = true
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Top Bar with Gradient
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.primaryContainer
-                            )
-                        )
-                    )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.Bottom
-                ) {
-                    Text(
-                        text = "GlobusLens Scanner",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "Point camera at text to translate",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
-                }
-            }
-
-            // Camera Preview
-            when (cameraPermissionState.status) {
-                is PermissionStatus.Granted -> {
-                    val controller = remember { LifecycleCameraController(context) }
-
-                    CameraPreview(
-                        controller = controller,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        onImageCaptured = { bitmap ->
-                            viewModel.processCapturedImage(bitmap)
-                        }
-                    )
-
-                    // Capture Button
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp)
-                            .padding(16.dp),
-                        contentAlignment = Alignment.TopCenter
-                    ) {
-                        FloatingActionButton(
-                            onClick = {
-                                val executor = ContextCompat.getMainExecutor(context)
-                                takePhoto(controller, executor) { bitmap ->
-                                    viewModel.processCapturedImage(bitmap)
-                                }
-                            },
-                            shape = CircleShape,
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(72.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CameraAlt,
-                                contentDescription = "Capture",
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-                    }
-                }
-                else -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "Camera permission required",
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { cameraPermissionState.launchPermissionRequest() },
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Grant Permission")
-                        }
-                    }
-                }
-            }
+    Scaffold(
+        bottomBar = {
+            BottomNavBar(navController = navController)
         }
-
-        // Bottom Navigation
-        BottomNavBar(
-            navController = navController,
-            modifier = Modifier.align(Alignment.BottomCenter),
-            currentRoute = Screen.Scanner.route
-        )
-
-        // Translation Dialog
-        if (showTranslationDialog && currentScannedText.isNotEmpty()) {
-            TranslationDialog(
-                text = currentScannedText,
-                onDismiss = { showTranslationDialog = false },
-                onSaveToFavorites = {
-                    viewModel.saveToFavorites(currentScannedText)
-                    showTranslationDialog = false
-                },
-                onAddToShoppingList = {
-                    viewModel.addToShoppingList(currentScannedText)
-                    showTranslationDialog = false
+    ) { paddingValues ->
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when {
+                cameraPermissionState.status.isGranted -> {
+                    CameraContent(
+                        onImageCaptured = { bitmap ->
+                            viewModel.scanProduct(bitmap)
+                        },
+                        onError = { exception ->
+                            // Handle error
+                        },
+                        scanState = scanState,
+                        onProductScanned = { productId ->
+                            navController.navigate("result/$productId")
+                        }
+                    )
                 }
-            )
+
+                cameraPermissionState.status is PermissionStatus.Denied -> {
+                    PermissionDeniedContent(
+                        onRequestPermission = { cameraPermissionState.launchPermissionRequest() },
+                        showRationale = (cameraPermissionState.status as PermissionStatus.Denied).shouldShowRationale
+                    )
+                }
+            }
         }
     }
 }
 
-private fun takePhoto(
-    controller: LifecycleCameraController,
-    executor: Executor,
-    onImageCaptured: (Bitmap) -> Unit
+@Composable
+fun CameraContent(
+    onImageCaptured: (Bitmap) -> Unit,
+    onError: (ImageCaptureException) -> Unit,
+    scanState: Resource<Int>,
+    onProductScanned: (Int) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val file = File.createTempFile("captured", ".jpg")
+    Box(modifier = modifier.fillMaxSize()) {
+        CameraPreview(
+            onImageCaptured = onImageCaptured,
+            onError = onError,
+            modifier = Modifier.fillMaxSize()
+        )
 
-    controller.takePicture(
-        ImageCapture.OutputFileOptions.Builder(file).build(),
-        executor,
-        object : ImageCapture.OnImageSavedCallback {
-            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                // Convert file to bitmap and process
-                val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
-                onImageCaptured(bitmap)
-                file.delete()
-            }
+        Text(
+            text = "Point camera at product label",
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(16.dp),
+            color = MaterialTheme.colorScheme.onPrimary,
+            style = MaterialTheme.typography.bodyLarge
+        )
 
-            override fun onError(exception: ImageCaptureException) {
-                exception.printStackTrace()
+        when (scanState) {
+            is Resource.Loading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .align(Alignment.Center)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
+            is Resource.Success -> {
+                LaunchedEffect(scanState.data) {
+                    onProductScanned(scanState.data)
+                }
+            }
+            is Resource.Error -> {
+                // Show error message
+            }
+            else -> {}
         }
-    )
+    }
+}
+
+@Composable
+fun PermissionDeniedContent(
+    onRequestPermission: () -> Unit,
+    showRationale: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = if (showRationale)
+                "Camera permission is required to scan products"
+            else
+                "Camera permission is required. Please enable it in settings",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = onRequestPermission
+        ) {
+            Text("Grant Permission")
+        }
+    }
 }
