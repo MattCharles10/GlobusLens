@@ -71,7 +71,7 @@ dependencies {
     implementation(libs.androidx.camera.view)
 
     // ML Kit
-    implementation(libs.google.mlkit.text.recognition.cyrillic)
+    implementation(libs.google.mlkit.text.recognition)
 
     // Room Database
     implementation(libs.androidx.room.runtime)
@@ -104,7 +104,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
-// Allow references to generated code
 kapt {
     correctErrorTypes = true
 }
