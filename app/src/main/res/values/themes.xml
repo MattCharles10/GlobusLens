@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.GlobusLens" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@color/background</item>
-        <item name="android:statusBarColor">@color/primary</item>
-        <item name="android:navigationBarColor">@color/background</item>
+        <item name="android:statusBarColor">@color/primary_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>
