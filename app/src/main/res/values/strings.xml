@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">GlobusLens</string>
+    <string name="scanner">Scanner</string>
     <string name="scan_product">Scan Product</string>
     <string name="favorites">Favorites</string>
     <string name="shopping_list">Shopping List</string>
