@@ -71,7 +71,7 @@ dependencies {
     implementation(libs.androidx.camera.view)
 
     // ML Kit
-    implementation(libs.google.mlkit.text.recognition)
+    implementation(libs.google.mlkit.text.recognition.cyrillic)
 
     // Room Database
     implementation(libs.androidx.room.runtime)
