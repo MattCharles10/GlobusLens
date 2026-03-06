@@ -3,58 +3,48 @@ package com.globuslens.ui.components
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.globuslens.R
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Camera
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.outlined.Camera
-import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material.icons.outlined.ShoppingCart
 
 sealed class BottomNavItem(
     val route: String,
-    val titleResId: Int,
-    val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector
+    val title: String,
+    val iconId: Int,
+    val selectedIconId: Int
 ) {
     object Scanner : BottomNavItem(
-        "scanner",
-        R.string.scanner,
-        Icons.Filled.Camera,
-        Icons.Outlined.Camera
+        route = "scanner",
+        title = "Scanner",
+        iconId = R.drawable.ic_scan,
+        selectedIconId = R.drawable.ic_scan_filled
     )
 
     object Favorites : BottomNavItem(
-        "favorites",
-        R.string.favorites,
-        Icons.Filled.Favorite,
-        Icons.Outlined.Favorite
+        route = "favorites",
+        title = "Favorites",
+        iconId = R.drawable.ic_favorite,
+        selectedIconId = R.drawable.ic_favorite_filled
     )
 
     object ShoppingList : BottomNavItem(
-        "shopping_list",
-        R.string.shopping_list,
-        Icons.Filled.ShoppingCart,
-        Icons.Outlined.ShoppingCart
+        route = "shopping_list",
+        title = "Shopping List",
+        iconId = R.drawable.ic_shopping_cart,
+        selectedIconId = R.drawable.ic_shopping_cart_filled
     )
 }
 
 @Composable
 fun BottomNavBar(
-    navController: NavController,
+    selectedRoute: String,
+    onItemSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val items = listOf(
@@ -63,39 +53,25 @@ fun BottomNavBar(
         BottomNavItem.ShoppingList
     )
 
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
     NavigationBar(
         modifier = modifier
             .fillMaxWidth()
-            .height(64.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp
+            .height(80.dp)
     ) {
         items.forEach { item ->
             NavigationBarItem(
-                selected = currentRoute == item.route,
-                onClick = {
-                    if (currentRoute != item.route) {
-                        navController.navigate(item.route) {
-                            popUpTo(navController.graph.startDestinationId)
-                            launchSingleTop = true
-                        }
-                    }
-                },
+                selected = selectedRoute == item.route,
+                onClick = { onItemSelected(item.route) },
                 icon = {
                     Icon(
-                        imageVector = if (currentRoute == item.route) item.selectedIcon else item.unselectedIcon,
-                        contentDescription = stringResource(item.titleResId)
+                        imageVector = if (selectedRoute == item.route)
+                            ImageVector.vectorResource(id = item.selectedIconId)
+                        else
+                            ImageVector.vectorResource(id = item.iconId),
+                        contentDescription = item.title
                     )
                 },
-                label = {
-                    Text(
-                        text = stringResource(item.titleResId),
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
+                label = { Text(text = item.title) }
             )
         }
     }

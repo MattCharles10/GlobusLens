@@ -1,113 +1,148 @@
 package com.globuslens.ui.components
 
-import android.graphics.Bitmap
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.ImageProxy
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
+import android.Manifest
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Camera
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
+import com.globuslens.camera.rememberCameraManager
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun CameraPreview(
-    onImageCaptured: (Bitmap) -> Unit,
-    onError: (ImageCaptureException) -> Unit,
+    onTextDetected: (String) -> Unit,
+    onError: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val cameraManager = rememberCameraManager()
 
-    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
-    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    val cameraPermissionState = rememberPermissionState(
+        permission = Manifest.permission.CAMERA
+    )
 
-    var imageCapture: ImageCapture? = remember { null }
-    val previewView = remember { PreviewView(context) }
+    var isCameraInitialized by remember { mutableStateOf(false) }
+    var previewView by remember { mutableStateOf<PreviewView?>(null) }
 
-    LaunchedEffect(Unit) {
-        val cameraProvider = cameraProviderFuture.get()
-
-        val preview = Preview.Builder().build().also {
-            it.setSurfaceProvider(previewView.surfaceProvider)
-        }
-
-        imageCapture = ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-            .build()
-
-        val imageAnalysis = ImageAnalysis.Builder()
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .build()
-
-        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-        try {
-            cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(
-                lifecycleOwner,
-                cameraSelector,
-                preview,
-                imageCapture,
-                imageAnalysis
-            )
-        } catch (exc: Exception) {
-            exc.printStackTrace()
+    LaunchedEffect(cameraPermissionState.status.isGranted) {
+        if (cameraPermissionState.status.isGranted && previewView != null && !isCameraInitialized) {
+            try {
+                cameraManager.startCamera(
+                    lifecycleOwner = lifecycleOwner,
+                    previewView = previewView!!,
+                    onTextDetected = onTextDetected
+                )
+                isCameraInitialized = true
+            } catch (e: Exception) {
+                onError("Failed to start camera: ${e.message}")
+            }
         }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        AndroidView(
-            factory = { previewView },
-            modifier = Modifier.fillMaxSize()
-        )
-
-        FloatingActionButton(
-            onClick = {
-                imageCapture?.takePicture(
-                    ContextCompat.getMainExecutor(context),
-                    object : ImageCapture.OnImageCapturedCallback() {
-                        override fun onCaptureSuccess(image: ImageProxy) {
-                            val bitmap = image.toBitmap()
-                            onImageCaptured(bitmap)
-                            image.close()
+        when {
+            cameraPermissionState.status.isGranted -> {
+                AndroidView(
+                    factory = { ctx ->
+                        PreviewView(ctx).also {
+                            previewView = it
                         }
-
-                        override fun onError(exception: ImageCaptureException) {
-                            onError(exception)
-                        }
-                    }
+                    },
+                    modifier = Modifier.fillMaxSize()
                 )
-            },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(24.dp),
-            containerColor = MaterialTheme.colorScheme.primary
+
+                // Scanning overlay
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(16.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                ) {
+                    Text(
+                        text = "Point camera at product text",
+                        modifier = Modifier.padding(8.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+
+            cameraPermissionState.status.shouldShowRationale -> {
+                PermissionRationale(
+                    onRequestPermission = { cameraPermissionState.launchPermissionRequest() }
+                )
+            }
+
+            else -> {
+                PermissionDenied(
+                    onRequestPermission = { cameraPermissionState.launchPermissionRequest() }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PermissionRationale(
+    onRequestPermission: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier.padding(16.dp),
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surface
         ) {
-            Icon(
-                imageVector = Icons.Default.Camera,
-                contentDescription = "Capture",
-                tint = MaterialTheme.colorScheme.onPrimary
+            Text(
+                text = "Camera permission is needed to scan product labels",
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun PermissionDenied(
+    onRequestPermission: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier.padding(16.dp),
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.errorContainer
+        ) {
+            Text(
+                text = "Camera permission denied. Cannot scan products.",
+                modifier = Modifier.padding(16.dp),
+                color = MaterialTheme.colorScheme.onErrorContainer
             )
         }
     }
