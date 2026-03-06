@@ -1,7 +1,6 @@
 package com.globuslens.ui.components
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,38 +24,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.globuslens.database.entities.Product
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun ProductCard(
     product: Product,
-    onFavoriteClick: (Product) -> Unit,
-    onClick: (Product) -> Unit,
+    onProductClick: (Long) -> Unit,
+    onFavoriteClick: (Long, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick(product) },
+            .clickable { onProductClick(product.id) },
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Product Image
             AsyncImage(
-                model = product.imageUrl,
+                model = product.imageUrl ?: "https://via.placeholder.com/80",
                 contentDescription = product.name,
                 modifier = Modifier
                     .size(80.dp)
@@ -64,57 +58,58 @@ fun ProductCard(
                 contentScale = ContentScale.Crop
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
             // Product Details
             Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = product.name,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 2
                 )
 
-                Text(
-                    text = product.brand,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                product.translatedName?.let {
+                    if (it != product.name) {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Spacer(modifier = Modifier.height(4.dp))
+
+                product.price?.let {
                     Text(
-                        text = "Expires: ${product.expiryDate}",
+                        text = "$${"%.2f".format(it)}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                product.expiryDate?.let {
+                    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+                    Text(
+                        text = "Exp: ${dateFormat.format(it)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (product.isExpiringSoon)
-                            MaterialTheme.colorScheme.tertiary
-                        else
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
 
             // Favorite Button
             IconButton(
-                onClick = { onFavoriteClick(product) }
+                onClick = { onFavoriteClick(product.id, !product.isFavorite) }
             ) {
                 Icon(
-                    imageVector = if (product.isFavorite)
-                        Icons.Default.Favorite
-                    else
-                        Icons.Default.FavoriteBorder,
+                    imageVector = if (product.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = "Favorite",
-                    tint = if (product.isFavorite)
-                        MaterialTheme.colorScheme.tertiary
-                    else
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    tint = if (product.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
         }
