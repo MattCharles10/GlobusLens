@@ -1,2 +1,46 @@
 package com.globuslens.camera
 
+import android.graphics.ImageFormat
+import android.media.Image
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import java.nio.ByteBuffer
+
+class TextRecognizer(
+    private val onTextDetected: (String) -> Unit
+) : ImageAnalysis.Analyzer {
+
+    private val recognizer = TextRecognition.getClient(
+        TextRecognizerOptions.DEFAULT_OPTIONS
+    )
+
+    override fun analyze(imageProxy: ImageProxy) {
+        val mediaImage = imageProxy.image
+
+        if (mediaImage != null) {
+            val inputImage = InputImage.fromMediaImage(
+                mediaImage,
+                imageProxy.imageInfo.rotationDegrees
+            )
+
+            recognizer.process(inputImage)
+                .addOnSuccessListener { visionText ->
+                    val detectedText = visionText.text
+                    if (detectedText.isNotBlank()) {
+                        onTextDetected(detectedText)
+                    }
+                }
+                .addOnFailureListener { e ->
+                    e.printStackTrace()
+                }
+                .addOnCompleteListener {
+                    imageProxy.close()
+                }
+        } else {
+            imageProxy.close()
+        }
+    }
+}
