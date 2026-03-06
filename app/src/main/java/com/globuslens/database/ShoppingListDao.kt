@@ -1,67 +1,32 @@
 package com.globuslens.database
 
-import androidx.room.Database
-import androidx.room.Room
-import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
-import com.globuslens.database.entities.Product
+import androidx.room.*
 import com.globuslens.database.entities.ShoppingItem
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
-import android.content.Context
-import com.globuslens.utils.Constants
+import kotlinx.coroutines.flow.Flow
 
-@Database(
-    entities = [Product::class, ShoppingItem::class],
-    version = 1,
-    exportSchema = false
-)
-@TypeConverters(Converters::class)
-abstract class AppDatabase : RoomDatabase() {
-    abstract fun productDao(): ProductDao
-    abstract fun shoppingListDao(): ShoppingListDao
+@Dao
+interface ShoppingListDao {
+    @Insert
+    suspend fun insertShoppingItem(item: ShoppingItem): Long
 
-    companion object {
-        @Volatile
-        private var INSTANCE: AppDatabase? = null
+    @Update
+    suspend fun updateShoppingItem(item: ShoppingItem)
 
-        fun getInstance(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    Constants.DATABASE_NAME
-                ).build()
-                INSTANCE = instance
-                instance
-            }
-        }
-    }
-}
+    @Delete
+    suspend fun deleteShoppingItem(item: ShoppingItem)
 
-@Module
-@InstallIn(SingletonComponent::class)
-object DatabaseModule {
+    @Query("SELECT * FROM shopping_list ORDER BY isChecked ASC, category ASC")
+    fun getAllShoppingItems(): Flow<List<ShoppingItem>>
 
-    @Provides
-    @Singleton
-    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
-        return AppDatabase.getInstance(context)
-    }
+    @Query("SELECT * FROM shopping_list WHERE isChecked = 0 ORDER BY category ASC")
+    fun getActiveShoppingItems(): Flow<List<ShoppingItem>>
 
-    @Provides
-    @Singleton
-    fun provideProductDao(database: AppDatabase): ProductDao {
-        return database.productDao()
-    }
+    @Query("UPDATE shopping_list SET isChecked = :isChecked WHERE id = :itemId")
+    suspend fun updateCheckStatus(itemId: Long, isChecked: Boolean)
 
-    @Provides
-    @Singleton
-    fun provideShoppingListDao(database: AppDatabase): ShoppingListDao {
-        return database.shoppingListDao()
-    }
+    @Query("DELETE FROM shopping_list WHERE isChecked = 1")
+    suspend fun deleteCheckedItems()
+
+    @Query("UPDATE shopping_list SET quantity = :quantity WHERE id = :itemId")
+    suspend fun updateQuantity(itemId: Long, quantity: Int)
 }

@@ -13,6 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import android.content.Context
+import com.globuslens.utils.Constants
 
 @Database(
     entities = [Product::class, ShoppingItem::class],
