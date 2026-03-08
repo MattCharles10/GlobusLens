@@ -1,6 +1,6 @@
 package com.globuslens.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -18,7 +19,9 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,348 +30,478 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.globuslens.R
 import com.globuslens.database.entities.Product
+import com.globuslens.ui.components.DetailItem
+import com.globuslens.ui.components.EmptyState
+import com.globuslens.ui.components.ErrorState
+import com.globuslens.ui.components.LoadingState
 import com.globuslens.ui.components.TranslationDialog
-import com.globuslens.utils.Resource
-import com.globuslens.viewmodel.ScannerViewModel
+import com.globuslens.viewmodel.ResultViewModel
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResultScreen(
     navController: NavController,
-    viewModel: ScannerViewModel,
-    productId: Int,
-    modifier: Modifier = Modifier
+    productId: Long,
+    viewModel: ResultViewModel = hiltViewModel()
 ) {
-    val productState by viewModel.productState
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val successMessage by viewModel.successMessage.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     var showTranslationDialog by remember { mutableStateOf(false) }
-    var selectedTextForTranslation by remember { mutableStateOf("") }
+    var showAddToListDialog by remember { mutableStateOf(false) }
 
+    // Load product when screen is opened
     LaunchedEffect(productId) {
         viewModel.loadProduct(productId)
+    }
+
+    // Handle errors
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            scope.launch {
+                val result = snackbarHostState.showSnackbar(
+                    message = error,
+                    duration = SnackbarDuration.Long,
+                    actionLabel = "Retry"
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    viewModel.loadProduct(productId)
+                }
+            }
+            viewModel.clearError()
+        }
+    }
+
+    // Handle success messages
+    LaunchedEffect(successMessage) {
+        successMessage?.let { message ->
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = message,
+                    duration = SnackbarDuration.Short
+                )
+                viewModel.clearSuccessMessage()
+            }
+        }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Product Details") },
+                title = { Text("Scan Result") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            when (val state = productState) {
-                is Resource.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                is Resource.Success -> {
-                    state.data?.let { product ->
-                        ProductDetailContent(
-                            product = product,
-                            onToggleFavorite = { viewModel.toggleFavorite(product) },
-                            onAddToShoppingList = { viewModel.addToShoppingList(product) },
-                            onTranslate = { text ->
-                                selectedTextForTranslation = text
-                                showTranslationDialog = true
+                actions = {
+                    if (uiState.product != null && !uiState.isLoading) {
+                        IconButton(
+                            onClick = { showTranslationDialog = true },
+                            enabled = !uiState.isTranslating
+                        ) {
+                            Icon(Icons.Default.Translate, contentDescription = "Translate")
+                        }
+                        IconButton(
+                            onClick = {
+                                viewModel.toggleFavorite(!uiState.product!!.isFavorite)
                             }
-                        )
-                    }
-                }
-                is Resource.Error -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = state.message ?: "Error loading product",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.loadProduct(productId) }) {
-                            Text("Retry")
+                        ) {
+                            Icon(
+                                imageVector = if (uiState.product!!.isFavorite)
+                                    Icons.Default.Favorite
+                                else
+                                    Icons.Default.FavoriteBorder,
+                                contentDescription = "Favorite",
+                                tint = if (uiState.product!!.isFavorite)
+                                    MaterialTheme.colorScheme.error
+                                else
+                                    MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
                 }
-                else -> {}
-            }
+            )
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when {
+                uiState.isLoading && uiState.product == null -> {
+                    LoadingState(message = "Loading scan result...")
+                }
 
-            if (showTranslationDialog) {
-                TranslationDialog(
-                    originalText = selectedTextForTranslation,
-                    translatedTextResource = viewModel.translatedText,
-                    onDismiss = { showTranslationDialog = false },
-                    onTranslate = { sourceLang, targetLang ->
-                        viewModel.translateText(selectedTextForTranslation, sourceLang, targetLang)
-                    },
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                uiState.error != null && uiState.product == null -> {
+                    ErrorState(
+                        message = uiState.error!!,
+                        onRetry = { viewModel.loadProduct(productId) }
+                    )
+                }
+
+                uiState.product != null -> {
+                    ResultContent(
+                        product = uiState.product!!,
+                        isTranslating = uiState.isTranslating,
+                        onAddToShoppingList = { showAddToListDialog = true }
+                    )
+                }
+
+                else -> {
+                    EmptyState(
+                        icon = Icons.Default.ArrowBack,
+                        title = "Product Not Found",
+                        message = "The scanned product couldn't be found",
+                        buttonText = "Go Back",
+                        onButtonClick = { navController.navigateUp() }
+                    )
+                }
             }
         }
+    }
+
+    // Translation Dialog
+    if (showTranslationDialog && uiState.product != null) {
+        TranslationDialog(
+            originalText = uiState.product!!.name,
+            translatedText = uiState.product!!.translatedName,
+            isLoading = uiState.isTranslating,
+            sourceLanguage = uiState.product!!.originalLanguage ?: "auto",
+            targetLanguage = "en",
+            onDismiss = { showTranslationDialog = false },
+            onTranslate = { text, targetLang ->
+                viewModel.translateProduct(text, targetLang)
+            }
+        )
+    }
+
+    // Add to Shopping List Dialog
+    if (showAddToListDialog && uiState.product != null) {
+        AlertDialog(
+            onDismissRequest = { showAddToListDialog = false },
+            title = { Text("Add to Shopping List") },
+            text = { Text("Add '${uiState.product!!.name}' to your shopping list?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.addToShoppingList(uiState.product!!)
+                        showAddToListDialog = false
+                    }
+                ) {
+                    Text("Add")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showAddToListDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
 @Composable
-fun ProductDetailContent(
+fun ResultContent(
     product: Product,
-    onToggleFavorite: () -> Unit,
-    onAddToShoppingList: () -> Unit,
-    onTranslate: (String) -> Unit,
-    modifier: Modifier = Modifier
+    isTranslating: Boolean,
+    onAddToShoppingList: () -> Unit
 ) {
+    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    val context = LocalContext.current
+
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(16.dp)
     ) {
+        // Success Message Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ShoppingCart,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Product Scanned Successfully!",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Product Image
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp),
-            shape = RoundedCornerShape(16.dp),
+                .height(200.dp)
+                .clip(RoundedCornerShape(12.dp)),
             elevation = CardDefaults.cardElevation(4.dp)
         ) {
             AsyncImage(
-                model = product.imageUrl,
+                model = ImageRequest.Builder(context)
+                    .data(product.imageUrl ?: "https://via.placeholder.com/300")
+                    .crossfade(true)
+                    .build(),
                 contentDescription = product.name,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                error = painterResource(id = R.drawable.ic_launcher_background)
             )
         }
 
-        // Title and Actions
-        Row(
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Product Name Section
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         ) {
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
+                Text(
+                    text = "Product Name",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+
                 Text(
                     text = product.name,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = product.brand,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-            }
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                IconButton(
-                    onClick = onToggleFavorite
-                ) {
-                    Icon(
-                        imageVector = if (product.isFavorite)
-                            Icons.Default.Favorite
-                        else
-                            Icons.Default.FavoriteBorder,
-                        contentDescription = if (product.isFavorite) "Remove from favorites" else "Add to favorites",
-                        tint = if (product.isFavorite)
-                            MaterialTheme.colorScheme.tertiary
-                        else
-                            MaterialTheme.colorScheme.onSurface
+                if (product.translatedName != null && product.translatedName != product.name) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = product.translatedName,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
 
-                IconButton(
-                    onClick = onAddToShoppingList
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ShoppingCart,
-                        contentDescription = "Add to shopping list",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        }
-
-        // Expiry Date
-        InfoCard(
-            title = "Expiry Date",
-            content = product.expiryDate,
-            isWarning = product.isExpiringSoon
-        )
-
-        // Ingredients
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Ingredients",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                IconButton(
-                    onClick = { onTranslate(product.ingredients) }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Translate,
-                        contentDescription = "Translate",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Text(
-                    text = product.ingredients,
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
-
-        // Nutritional Information
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "Nutritional Information",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    product.nutritionalInfo.forEach { (key, value) ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = key,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = value,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
+                if (isTranslating) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Translating...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
                     }
                 }
             }
         }
 
-        // Add to Shopping List Button
-        Button(
-            onClick = onAddToShoppingList,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.ShoppingCart,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.size(8.dp))
-            Text("Add to Shopping List")
-        }
-    }
-}
+        Spacer(modifier = Modifier.height(12.dp))
 
-@Composable
-fun InfoCard(
-    title: String,
-    content: String,
-    isWarning: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isWarning)
-                MaterialTheme.colorScheme.tertiaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+        // Price Section (if available)
+        if (product.price != null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Price:",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = when (product.currency) {
+                            "USD" -> "$${"%.2f".format(product.price)}"
+                            "EUR" -> "€${"%.2f".format(product.price)}"
+                            "GBP" -> "£${"%.2f".format(product.price)}"
+                            else -> "${product.currency} ${"%.2f".format(product.price)}"
+                        },
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // Product Details Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                color = if (isWarning)
-                    MaterialTheme.colorScheme.onTertiaryContainer
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = content,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (isWarning)
-                    MaterialTheme.colorScheme.onTertiaryContainer
-                else
-                    MaterialTheme.colorScheme.onSurface
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Product Details",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Category
+                if (product.category != null) {
+                    DetailItem(
+                        label = "Category",
+                        value = product.category
+                    )
+                }
+
+                // Expiry Date
+                if (product.expiryDate != null) {
+                    DetailItem(
+                        label = "Expiry Date",
+                        value = dateFormat.format(product.expiryDate),
+                        isWarning = product.expiryDate.before(Date())
+                    )
+                }
+
+                // Nutrition Info
+                if (product.nutritionInfo != null) {
+                    DetailItem(
+                        label = "Nutrition",
+                        value = product.nutritionInfo
+                    )
+                }
+
+                // Ingredients
+                if (product.ingredients != null) {
+                    DetailItem(
+                        label = "Ingredients",
+                        value = product.ingredients
+                    )
+                }
+
+                // Allergens
+                if (product.allergens != null) {
+                    DetailItem(
+                        label = "Allergens",
+                        value = product.allergens,
+                        isWarning = true
+                    )
+                }
+
+                // Barcode
+                if (product.barcode != null) {
+                    DetailItem(
+                        label = "Barcode",
+                        value = product.barcode
+                    )
+                }
+
+                // Scanned Date
+                DetailItem(
+                    label = "Scanned on",
+                    value = dateFormat.format(product.scannedDate)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Action Buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = onAddToShoppingList,
+                modifier = Modifier.weight(1f),
+                enabled = !isTranslating
+            ) {
+                Icon(
+                    Icons.Default.ShoppingCart,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.size(4.dp))
+                Text("Add to List")
+            }
+
+            Button(
+                onClick = { /* Navigate back to scanner */ },
+                modifier = Modifier.weight(1f),
+                enabled = !isTranslating,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Text("Scan Again")
+            }
         }
     }
 }
