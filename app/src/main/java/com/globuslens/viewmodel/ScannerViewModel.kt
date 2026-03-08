@@ -1,93 +1,164 @@
 package com.globuslens.viewmodel
 
-import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.globuslens.camera.TextRecognizer
 import com.globuslens.database.entities.Product
-import com.globuslens.database.entities.ShoppingItem
 import com.globuslens.repository.ProductRepository
-import com.globuslens.repository.ShoppingListRepository
 import com.globuslens.repository.TranslationRepository
+import com.globuslens.utils.Constants
 import com.globuslens.utils.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Date
 import javax.inject.Inject
 
 @HiltViewModel
 class ScannerViewModel @Inject constructor(
-    private val translationRepository: TranslationRepository,
     private val productRepository: ProductRepository,
-    private val shoppingListRepository: ShoppingListRepository,
-    private val textRecognizer: TextRecognizer
+    private val translationRepository: TranslationRepository
 ) : ViewModel() {
 
-    private val _recognizedText = MutableStateFlow("")
-    val recognizedText: StateFlow<String> = _recognizedText.asStateFlow()
+    private val _uiState = MutableStateFlow(ScannerUiState())
+    val uiState: StateFlow<ScannerUiState> = _uiState.asStateFlow()
 
-    private val _translationResult = MutableStateFlow<Resource<TranslationResponse>>(Resource.Idle)
-    val translationResult: StateFlow<Resource<TranslationResponse>> = _translationResult.asStateFlow()
+    private val _successMessage = MutableStateFlow<String?>(null)
+    val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
-    private val _isProcessing = MutableStateFlow(false)
-    val isProcessing: StateFlow<Boolean> = _isProcessing.asStateFlow()
+    private var lastScanTime = 0L
+    private val scanDebounceMs = 2000L
 
-    fun processCapturedImage(bitmap: Bitmap) {
+    fun onTextDetected(text: String) {
+        val currentTime = System.currentTimeMillis()
+
+        if (currentTime - lastScanTime < scanDebounceMs || text.length < Constants.MIN_TEXT_LENGTH) {
+            return
+        }
+
+        lastScanTime = currentTime
+
         viewModelScope.launch {
-            _isProcessing.value = true
+            _uiState.update { it.copy(isProcessing = true, detectedText = text, error = null) }
+
             try {
-                val text = textRecognizer.recognizeText(bitmap)
-                _recognizedText.value = text
-                translateText(text)
+                // Translate the detected text
+                val translationResult = translationRepository.translateText(text)
+
+                when (translationResult) {
+                    is Resource.Success -> {
+                        _uiState.update {
+                            it.copy(
+                                translatedText = translationResult.data,
+                                isProcessing = false
+                            )
+                        }
+                    }
+                    is Resource.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                error = translationResult.message ?: "Translation failed",
+                                isProcessing = false
+                            )
+                        }
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isProcessing = false) }
+                    }
+                }
             } catch (e: Exception) {
-                _recognizedText.value = ""
-                _translationResult.value = Resource.Error("Failed to recognize text: ${e.message}")
-            } finally {
-                _isProcessing.value = false
+                _uiState.update {
+                    it.copy(
+                        error = "Error processing text: ${e.message}",
+                        isProcessing = false
+                    )
+                }
             }
         }
     }
 
-    fun translateText(text: String) {
+    fun saveProduct() {
+        val state = _uiState.value
+        val name = state.translatedText ?: state.detectedText
+
+        if (name.isBlank()) {
+            _uiState.update { it.copy(error = "No text detected to save") }
+            return
+        }
+
         viewModelScope.launch {
-            _translationResult.value = Resource.Loading
+            _uiState.update { it.copy(isProcessing = true, error = null) }
+
             try {
-                val result = translationRepository.translateText(
-                    text = text,
-                    sourceLang = "en",
-                    targetLang = "ru"
+                val product = Product(
+                    name = state.detectedText,
+                    translatedName = state.translatedText,
+                    scannedDate = Date(),
+                    originalLanguage = "auto"
                 )
-                _translationResult.value = Resource.Success(result)
+
+                val result = productRepository.saveProduct(product)
+
+                when (result) {
+                    is Resource.Success -> {
+                        _uiState.update {
+                            it.copy(
+                                savedProductId = result.data,
+                                isProcessing = false
+                            )
+                        }
+                        _successMessage.update { "Product saved successfully" }
+                    }
+                    is Resource.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                error = result.message ?: "Failed to save product",
+                                isProcessing = false
+                            )
+                        }
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isProcessing = false) }
+                    }
+                }
             } catch (e: Exception) {
-                _translationResult.value = Resource.Error("Translation failed: ${e.message}")
+                _uiState.update {
+                    it.copy(
+                        error = "Error saving product: ${e.message}",
+                        isProcessing = false
+                    )
+                }
             }
         }
     }
 
-    fun saveToFavorites(text: String) {
-        viewModelScope.launch {
-            val product = Product(
-                originalText = text,
-                translatedText = _translationResult.value.data?.translatedText ?: "",
-                sourceLanguage = "en",
-                targetLanguage = "ru",
-                timestamp = System.currentTimeMillis(),
-                isFavorite = true
-            )
-            productRepository.insertProduct(product)
-        }
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 
-    fun addToShoppingList(text: String) {
-        viewModelScope.launch {
-            val item = ShoppingItem(
-                name = text,
-                translatedName = _translationResult.value.data?.translatedText ?: "",
-                quantity = 1,
-                isChecked = false,
-                timestamp = System.currentTimeMillis()
-            )
-            shoppingListRepository.insertItem(item)
+    fun clearSuccessMessage() {
+        _successMessage.update { null }
+    }
+
+    fun resetScan() {
+        _uiState.update {
+            ScannerUiState()
         }
+        lastScanTime = 0L
+    }
+
+    fun onResultShown() {
+        _uiState.update { it.copy(savedProductId = null) }
     }
 }
+
+data class ScannerUiState(
+    val detectedText: String = "",
+    val translatedText: String? = null,
+    val isProcessing: Boolean = false,
+    val savedProductId: Long? = null,
+    val error: String? = null
+)
