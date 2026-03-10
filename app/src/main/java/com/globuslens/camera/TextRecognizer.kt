@@ -9,7 +9,7 @@ import androidx.camera.core.ImageProxy
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-//import java.nio.ByteBuffer
+import java.nio.ByteBuffer
 
 class TextRecognizer(
     private val onTextDetected: (String) -> Unit
