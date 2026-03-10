@@ -14,7 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -124,7 +124,7 @@ fun ResultScreen(
                 title = { Text("Scan Result") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -179,13 +179,14 @@ fun ResultScreen(
                     ResultContent(
                         product = uiState.product!!,
                         isTranslating = uiState.isTranslating,
-                        onAddToShoppingList = { showAddToListDialog = true }
+                        onAddToShoppingList = { showAddToListDialog = true },
+                        onScanAgain = { navController.popBackStack() }
                     )
                 }
 
                 else -> {
                     EmptyState(
-                        icon = Icons.Default.ArrowBack,
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
                         title = "Product Not Found",
                         message = "The scanned product couldn't be found",
                         buttonText = "Go Back",
@@ -242,7 +243,8 @@ fun ResultScreen(
 fun ResultContent(
     product: Product,
     isTranslating: Boolean,
-    onAddToShoppingList: () -> Unit
+    onAddToShoppingList: () -> Unit,
+    onScanAgain: () -> Unit
 ) {
     val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
     val context = LocalContext.current
@@ -493,7 +495,7 @@ fun ResultContent(
             }
 
             Button(
-                onClick = { /* Navigate back to scanner */ },
+                onClick = onScanAgain,
                 modifier = Modifier.weight(1f),
                 enabled = !isTranslating,
                 colors = ButtonDefaults.buttonColors(

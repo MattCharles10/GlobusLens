@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -212,7 +213,6 @@ fun ShoppingListScreen(
                                         viewModel.updateQuantity(itemId, quantity)
                                     },
                                     onDelete = { shoppingItem ->
-                                        // Show confirmation dialog instead of direct delete
                                         itemToDelete = shoppingItem
                                     }
                                 )
@@ -273,7 +273,7 @@ fun ShoppingListScreen(
                         viewModel.removeShoppingItem(item)
                         itemToDelete = null
                     },
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
