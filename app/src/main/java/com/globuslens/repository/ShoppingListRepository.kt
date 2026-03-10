@@ -23,6 +23,15 @@ class ShoppingListRepository @Inject constructor(
         emit(Resource.Error(e.message ?: "Unknown error"))
     }
 
+    fun getActiveShoppingItems(): Flow<Resource<List<ShoppingItem>>> = flow {
+        emit(Resource.Loading())
+        shoppingListDao.getActiveShoppingItems().collect { items ->
+            emit(Resource.Success(items))
+        }
+    }.catch { e ->
+        emit(Resource.Error(e.message ?: "Unknown error"))
+    }
+
     suspend fun addShoppingItem(item: ShoppingItem): Resource<Long> {
         return try {
             val id = shoppingListDao.insertShoppingItem(item)
@@ -56,6 +65,15 @@ class ShoppingListRepository @Inject constructor(
             Resource.Success(Unit)
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Failed to update item status")
+        }
+    }
+
+    suspend fun updateQuantity(itemId: Long, quantity: Int): Resource<Unit> {
+        return try {
+            shoppingListDao.updateQuantity(itemId, quantity)
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to update quantity")
         }
     }
 

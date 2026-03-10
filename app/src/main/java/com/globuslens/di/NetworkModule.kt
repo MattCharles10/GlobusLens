@@ -1,5 +1,7 @@
-package com.globuslens.network
+package com.globuslens.di
 
+import com.globuslens.network.LibreTranslateService
+import com.globuslens.network.MyMemoryService
 import com.globuslens.utils.Constants
 import dagger.Module
 import dagger.Provides
@@ -14,11 +16,13 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object ApiClient {
+object NetworkModule {
 
     private const val TIMEOUT_SECONDS = 30L
 
-    private fun provideOkHttpClient(): OkHttpClient {
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
@@ -34,10 +38,12 @@ object ApiClient {
 
     @Provides
     @Singleton
-    fun provideLibreTranslateService(): LibreTranslateService {
+    fun provideLibreTranslateService(
+        okHttpClient: OkHttpClient
+    ): LibreTranslateService {
         return Retrofit.Builder()
             .baseUrl(Constants.LIBRE_TRANSLATE_API)
-            .client(provideOkHttpClient())
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(LibreTranslateService::class.java)
@@ -45,10 +51,12 @@ object ApiClient {
 
     @Provides
     @Singleton
-    fun provideMyMemoryService(): MyMemoryService {
+    fun provideMyMemoryService(
+        okHttpClient: OkHttpClient
+    ): MyMemoryService {
         return Retrofit.Builder()
             .baseUrl(Constants.MY_MEMORY_API)
-            .client(provideOkHttpClient())
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(MyMemoryService::class.java)

@@ -35,8 +35,9 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.4"
+        kotlinCompilerExtensionVersion = "1.5.10"  // Compatible with Kotlin 1.9.22
     }
+
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -65,10 +66,12 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
 
     // Compose Additional Dependencies
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.hilt.navigation.compose)
+
+    // ADD THIS MISSING DEPENDENCY for collectAsStateWithLifecycle
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    implementation("androidx.navigation:navigation-compose:2.7.7")
-    implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
 
     // CameraX
     implementation(libs.androidx.camera.core)
@@ -77,11 +80,7 @@ dependencies {
     implementation(libs.androidx.camera.view)
 
     // ML Kit Text Recognition
-    implementation("com.google.mlkit:text-recognition:16.0.0")
-    implementation("com.google.mlkit:text-recognition-chinese:16.0.0")
-    implementation("com.google.mlkit:text-recognition-devanagari:16.0.0")
-    implementation("com.google.mlkit:text-recognition-japanese:16.0.0")
-    implementation("com.google.mlkit:text-recognition-korean:16.0.0")
+    implementation(libs.google.mlkit.text.recognition)
 
     // Room Database
     implementation(libs.androidx.room.runtime)
@@ -113,6 +112,16 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
+// Configure kapt for Java 21
 kapt {
     correctErrorTypes = true
+    javacOptions {
+
+        // These options allow access to internal Java compiler APIs
+        option("-XaddExports", "jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED")
+        option("-XaddExports", "jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED")
+        option("-XaddExports", "jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED")
+        option("-XaddExports", "jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED")
+        option("-XaddExports", "jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED")
+    }
 }

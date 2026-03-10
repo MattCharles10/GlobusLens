@@ -1,8 +1,8 @@
 package com.globuslens.repository
 
+import com.globuslens.database.entities.LibreTranslateRequest
 import com.globuslens.network.LibreTranslateService
 import com.globuslens.network.MyMemoryService
-import com.globuslens.database.entities.LibreTranslateRequest
 import com.globuslens.utils.Constants
 import com.globuslens.utils.NetworkUtils
 import com.globuslens.utils.Resource
@@ -33,7 +33,7 @@ class TranslationRepository @Inject constructor(
 
         // If no internet, return original text
         if (!networkUtils.isNetworkAvailable()) {
-            return@withContext Resource.Success(text) // Return original if offline
+            return@withContext Resource.Success(text)
         }
 
         // Try LibreTranslate first (free, no API key)

@@ -35,33 +35,42 @@ class ShoppingListViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            shoppingListRepository.getAllShoppingItems().collect { resource ->
-                when (resource) {
-                    is Resource.Success -> {
-                        val items = resource.data ?: emptyList()
-                        val total = items.filter { !it.isChecked }
-                            .sumOf { it.price?.times(it.quantity) ?: 0.0 }
+            try {
+                shoppingListRepository.getAllShoppingItems().collect { resource ->
+                    when (resource) {
+                        is Resource.Success -> {
+                            val items = resource.data ?: emptyList()
+                            val total = items.filter { !it.isChecked }
+                                .sumOf { it.price?.times(it.quantity) ?: 0.0 }
 
-                        _uiState.update {
-                            it.copy(
-                                items = items,
-                                totalPrice = total,
-                                isLoading = false,
-                                error = null
-                            )
+                            _uiState.update {
+                                it.copy(
+                                    items = items,
+                                    totalPrice = total,
+                                    isLoading = false,
+                                    error = null
+                                )
+                            }
+                        }
+                        is Resource.Loading -> {
+                            _uiState.update { it.copy(isLoading = true) }
+                        }
+                        is Resource.Error -> {
+                            _uiState.update {
+                                it.copy(
+                                    error = resource.message ?: "Failed to load shopping list",
+                                    isLoading = false
+                                )
+                            }
                         }
                     }
-                    is Resource.Loading -> {
-                        _uiState.update { it.copy(isLoading = true) }
-                    }
-                    is Resource.Error -> {
-                        _uiState.update {
-                            it.copy(
-                                error = resource.message ?: "Failed to load shopping list",
-                                isLoading = false
-                            )
-                        }
-                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        error = "Error loading shopping list: ${e.message}",
+                        isLoading = false
+                    )
                 }
             }
         }
@@ -83,33 +92,42 @@ class ShoppingListViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
-            val item = ShoppingItem(
-                name = name,
-                quantity = quantity,
-                price = price,
-                notes = notes
-            )
+            try {
+                val item = ShoppingItem(
+                    name = name,
+                    quantity = quantity,
+                    price = price,
+                    notes = notes
+                )
 
-            val result = shoppingListRepository.addShoppingItem(item)
+                val result = shoppingListRepository.addShoppingItem(item)
 
-            when (result) {
-                is Resource.Success -> {
-                    _uiState.update { it.copy(isLoading = false) }
-                    _successMessage.update { "Item added successfully" }
-                    toggleAddItemDialog()
-                }
-                is Resource.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            error = result.message ?: "Failed to add item",
-                            isLoading = false
-                        )
+                when (result) {
+                    is Resource.Success -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        _successMessage.update { "Item added successfully" }
+                        toggleAddItemDialog()
+                    }
+                    is Resource.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                error = result.message ?: "Failed to add item",
+                                isLoading = false
+                            )
+                        }
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isLoading = false) }
                     }
                 }
-                else -> {
-                    _uiState.update { it.copy(isLoading = false) }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        error = "Error adding item: ${e.message}",
+                        isLoading = false
+                    )
                 }
             }
         }
@@ -118,10 +136,19 @@ class ShoppingListViewModel @Inject constructor(
     fun toggleItemChecked(itemId: Long, isChecked: Boolean) {
         viewModelScope.launch {
             try {
-                shoppingListRepository.toggleItemChecked(itemId, isChecked)
-                updateTotalPrice()
-                _successMessage.update {
-                    if (isChecked) "Item marked as done" else "Item unmarked"
+                val result = shoppingListRepository.toggleItemChecked(itemId, isChecked)
+
+                when (result) {
+                    is Resource.Success -> {
+                        updateTotalPrice()
+                        _successMessage.update {
+                            if (isChecked) "Item marked as done" else "Item unmarked"
+                        }
+                    }
+                    is Resource.Error -> {
+                        _uiState.update { it.copy(error = result.message) }
+                    }
+                    else -> {}
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Failed to update item: ${e.message}") }
@@ -137,11 +164,7 @@ class ShoppingListViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val currentItems = _uiState.value.items
-                val item = currentItems.find { it.id == itemId } ?: return@launch
-
-                val updatedItem = item.copy(quantity = quantity)
-                val result = shoppingListRepository.updateShoppingItem(updatedItem)
+                val result = shoppingListRepository.updateQuantity(itemId, quantity)
 
                 when (result) {
                     is Resource.Success -> {
@@ -158,11 +181,10 @@ class ShoppingListViewModel @Inject constructor(
         }
     }
 
-    // Renamed from deleteItem to removeShoppingItem for better clarity
     fun removeShoppingItem(item: ShoppingItem) {
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(isLoading = true) }
+                _uiState.update { it.copy(isLoading = true, error = null) }
 
                 val result = shoppingListRepository.deleteShoppingItem(item)
 
@@ -186,7 +208,7 @@ class ShoppingListViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
-                        error = "Failed to remove item: ${e.message}",
+                        error = "Error removing item: ${e.message}",
                         isLoading = false
                     )
                 }
@@ -197,7 +219,7 @@ class ShoppingListViewModel @Inject constructor(
     fun clearCheckedItems() {
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(isLoading = true) }
+                _uiState.update { it.copy(isLoading = true, error = null) }
 
                 val result = shoppingListRepository.clearCheckedItems()
 
@@ -221,7 +243,7 @@ class ShoppingListViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
-                        error = "Failed to clear items: ${e.message}",
+                        error = "Error clearing items: ${e.message}",
                         isLoading = false
                     )
                 }
