@@ -16,7 +16,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,27 +35,10 @@ fun TranslationDialog(
     sourceLanguage: String,
     targetLanguage: String,
     onDismiss: () -> Unit,
-    onTranslate: (String, String) -> Unit,
-    modifier: Modifier = Modifier
+    onTranslate: (String, String) -> Unit
 ) {
     var textToTranslate by remember { mutableStateOf(originalText) }
-    var selectedSourceLang by remember { mutableStateOf(sourceLanguage) }
     var selectedTargetLang by remember { mutableStateOf(targetLanguage) }
-
-    val languages = listOf("auto", "en", "es", "fr", "de", "it", "pt", "ru", "zh", "ja", "ko")
-    val languageNames = mapOf(
-        "auto" to "Auto Detect",
-        "en" to "English",
-        "es" to "Spanish",
-        "fr" to "French",
-        "de" to "German",
-        "it" to "Italian",
-        "pt" to "Portuguese",
-        "ru" to "Russian",
-        "zh" to "Chinese",
-        "ja" to "Japanese",
-        "ko" to "Korean"
-    )
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -83,14 +65,6 @@ fun TranslationDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Source Language Dropdown
-                Text(
-                    text = "From: ${languageNames[selectedSourceLang] ?: "Auto"}",
-                    style = MaterialTheme.typography.labelLarge
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
                 // Source Text
                 OutlinedTextField(
                     value = textToTranslate,
@@ -98,14 +72,6 @@ fun TranslationDialog(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Text to translate") },
                     minLines = 3
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Target Language Dropdown
-                Text(
-                    text = "To: ${languageNames[selectedTargetLang] ?: "English"}",
-                    style = MaterialTheme.typography.labelLarge
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))

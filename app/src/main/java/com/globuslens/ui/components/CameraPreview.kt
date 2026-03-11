@@ -5,7 +5,6 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,9 +21,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.rememberPermissionState
-import com.google.accompanist.permissions.shouldShowRationale
 import com.globuslens.camera.rememberCameraManager
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -45,8 +43,8 @@ fun CameraPreview(
     var isCameraInitialized by remember { mutableStateOf(false) }
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
 
-    LaunchedEffect(cameraPermissionState.status.isGranted) {
-        if (cameraPermissionState.status.isGranted && previewView != null && !isCameraInitialized) {
+    LaunchedEffect(cameraPermissionState.status) {
+        if (cameraPermissionState.status is PermissionStatus.Granted && previewView != null && !isCameraInitialized) {
             try {
                 cameraManager.startCamera(
                     lifecycleOwner = lifecycleOwner,
@@ -61,8 +59,8 @@ fun CameraPreview(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        when {
-            cameraPermissionState.status.isGranted -> {
+        when (cameraPermissionState.status) {
+            is PermissionStatus.Granted -> {
                 AndroidView(
                     factory = { ctx ->
                         PreviewView(ctx).also {
@@ -88,28 +86,22 @@ fun CameraPreview(
                 }
             }
 
-            cameraPermissionState.status.shouldShowRationale -> {
-                PermissionRationale(
-                    onRequestPermission = { cameraPermissionState.launchPermissionRequest() }
-                )
-            }
-
-            else -> {
-                PermissionDenied(
-                    onRequestPermission = { cameraPermissionState.launchPermissionRequest() }
-                )
+            is PermissionStatus.Denied -> {
+                val deniedState = cameraPermissionState.status as PermissionStatus.Denied
+                if (deniedState.shouldShowRationale) {
+                    PermissionRationale()
+                } else {
+                    PermissionDenied()
+                }
             }
         }
     }
 }
 
 @Composable
-fun PermissionRationale(
-    onRequestPermission: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun PermissionRationale() {
     Box(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Surface(
@@ -126,12 +118,9 @@ fun PermissionRationale(
 }
 
 @Composable
-fun PermissionDenied(
-    onRequestPermission: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun PermissionDenied() {
     Box(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Surface(

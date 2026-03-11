@@ -14,7 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -123,7 +123,7 @@ fun ProductDetailScreen(
                 title = { Text("Product Details") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -184,7 +184,7 @@ fun ProductDetailScreen(
 
                 else -> {
                     EmptyState(
-                        icon = Icons.Default.ArrowBack,
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
                         title = "Product Not Found",
                         message = "The product you're looking for doesn't exist",
                         buttonText = "Go Back",
@@ -364,7 +364,7 @@ fun ProductDetailContent(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // Product Details Card - Using DetailItem component
+        // Product Details Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -376,6 +376,13 @@ fun ProductDetailContent(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
+                Text(
+                    text = "Product Details",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
                 // Category
                 if (product.category != null) {
                     DetailItem(

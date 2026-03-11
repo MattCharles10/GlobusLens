@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
@@ -51,7 +52,6 @@ fun LoadingState(
         }
     }
 }
-
 @Composable
 fun ErrorState(
     message: String,
@@ -97,16 +97,15 @@ fun ErrorState(
                 modifier = Modifier.fillMaxWidth(0.7f)
             ) {
                 Icon(Icons.Default.Refresh, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.size(8.dp))
                 Text("Retry")
             }
         }
     }
 }
-
 @Composable
 fun EmptyState(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     message: String,
     buttonText: String,

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "968651685898",
+    "project_id": "globuslens",
+    "storage_bucket": "globuslens.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:968651685898:android:da6850f1570d5007471ff3",
+        "android_client_info": {
+          "package_name": "com.globuslens"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBAocq1Ls7AGAvAgQEZNKFGaaW5jNTx32M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

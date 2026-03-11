@@ -10,6 +10,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.globuslens.ui.screens.FavoritesScreen
+import com.globuslens.ui.screens.LandingScreen
+import com.globuslens.ui.screens.PrivacyPolicyScreen
 import com.globuslens.ui.screens.ProductDetailScreen
 import com.globuslens.ui.screens.ResultScreen
 import com.globuslens.ui.screens.ScannerScreen
@@ -21,6 +23,9 @@ import com.globuslens.viewmodel.ScannerViewModel
 import com.globuslens.viewmodel.ShoppingListViewModel
 
 sealed class Screen(val route: String) {
+
+    object PrivacyPolicy : Screen("privacy_policy")
+    object Landing : Screen("landing")
     object Scanner : Screen("scanner")
     object Result : Screen("result/{productId}") {
         fun passProductId(productId: Long): String = "result/$productId"
@@ -44,13 +49,24 @@ sealed class Screen(val route: String) {
 fun NavGraph(
     navController: NavHostController = rememberNavController(),
     modifier: Modifier = Modifier,
-    startDestination: String = Screen.Scanner.route
+    startDestination: String = Screen.Landing.route
 ) {
     NavHost(
         navController = navController,
         startDestination = startDestination,
         modifier = modifier
     ) {
+
+        // Landing Screen
+        composable(Screen.Landing.route) {
+            LandingScreen(
+                navController = navController
+            )
+        }
+        composable(Screen.PrivacyPolicy.route) {
+            PrivacyPolicyScreen(navController = navController)
+        }
+
         // Scanner Screen
         composable(Screen.Scanner.route) {
             val viewModel: ScannerViewModel = hiltViewModel()
