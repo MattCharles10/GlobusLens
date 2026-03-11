@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.dagger.hilt.android)
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
 }
 
 android {
@@ -23,6 +25,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -34,10 +37,10 @@ android {
         compose = true
     }
 
+    // This works with Kotlin 1.9.22
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.10"  // Compatible with Kotlin 1.9.22
+        kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
     }
-
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -64,13 +67,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
-
-    // Compose Additional Dependencies
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.hilt.navigation.compose)
-
-    // ADD THIS MISSING DEPENDENCY for collectAsStateWithLifecycle
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
 
     // CameraX
@@ -79,10 +78,15 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
 
-    // ML Kit Text Recognition
+    // Firebase - using stable BoM
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.analytics)
+
+    // ML Kit
     implementation(libs.google.mlkit.text.recognition)
 
-    // Room Database
+    // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     kapt(libs.androidx.room.compiler)
@@ -112,16 +116,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
-// Configure kapt for Java 21
 kapt {
     correctErrorTypes = true
-    javacOptions {
-
-        // These options allow access to internal Java compiler APIs
-        option("-XaddExports", "jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED")
-        option("-XaddExports", "jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED")
-        option("-XaddExports", "jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED")
-        option("-XaddExports", "jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED")
-        option("-XaddExports", "jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED")
-    }
 }
