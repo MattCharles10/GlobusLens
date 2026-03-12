@@ -84,6 +84,60 @@ class CameraManager(
         }, ContextCompat.getMainExecutor(context))
     }
 
+    // NEW: Barcode Scanner Function
+    suspend fun startBarcodeScanner(
+        lifecycleOwner: LifecycleOwner,
+        previewView: PreviewView,
+        onBarcodeDetected: (String, Int) -> Unit
+    ): Camera = suspendCoroutine { continuation ->
+
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+
+        cameraProviderFuture.addListener({
+
+            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+
+            // Preview
+            val preview = Preview.Builder().build()
+            preview.setSurfaceProvider(previewView.surfaceProvider)
+
+            // Image Capture (optional)
+            imageCapture = ImageCapture.Builder().build()
+
+            // Image Analysis for barcode scanning
+            imageAnalysis = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+
+            // Barcode scanner analyzer
+            val analyzer = BarcodeScanner { barcode, format ->
+                onBarcodeDetected(barcode, format)
+            }
+
+            imageAnalysis?.setAnalyzer(cameraExecutor, analyzer)
+
+            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+            try {
+                cameraProvider.unbindAll()
+
+                camera = cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    cameraSelector,
+                    preview,
+                    imageCapture,
+                    imageAnalysis
+                )
+
+                continuation.resume(camera!!)
+
+            } catch (exc: Exception) {
+                continuation.resumeWithException(exc)
+            }
+
+        }, ContextCompat.getMainExecutor(context))
+    }
+
     fun shutdown() {
         cameraExecutor.shutdown()
     }
@@ -91,9 +145,7 @@ class CameraManager(
 
 @Composable
 fun rememberCameraManager(): CameraManager {
-
     val context = LocalContext.current
-
     return remember {
         CameraManager(context)
     }
