@@ -1,4 +1,4 @@
-package com.globuslens.database.entities
+package com.globuslens.network.models
 
 import com.google.gson.annotations.SerializedName
 

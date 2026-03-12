@@ -1,8 +1,6 @@
-package com.globuslens.database.entities
+package com.globuslens.network.models
 
 import com.google.gson.annotations.SerializedName
-import okio.Source
-import java.text.Format
 
 data class LibreTranslateRequest(
     @SerializedName("q") val text : String ,
