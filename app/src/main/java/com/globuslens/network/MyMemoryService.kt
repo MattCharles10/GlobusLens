@@ -1,8 +1,6 @@
 package com.globuslens.network
 
-import androidx.compose.ui.text.input.TransformedText
-
-import com.globuslens.database.entities.MyMemoryResponse
+import com.globuslens.network.models.MyMemoryResponse
 import retrofit2.http.GET
 import retrofit2.http.Query
 
