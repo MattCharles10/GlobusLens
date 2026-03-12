@@ -9,13 +9,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.globuslens.ui.screens.BarcodeScannerScreen
 import com.globuslens.ui.screens.FavoritesScreen
 import com.globuslens.ui.screens.LandingScreen
 import com.globuslens.ui.screens.PrivacyPolicyScreen
 import com.globuslens.ui.screens.ProductDetailScreen
 import com.globuslens.ui.screens.ResultScreen
 import com.globuslens.ui.screens.ScannerScreen
+import com.globuslens.ui.screens.SettingsScreen
 import com.globuslens.ui.screens.ShoppingListScreen
+import com.globuslens.viewmodel.BarcodeScannerViewModel
 import com.globuslens.viewmodel.FavoritesViewModel
 import com.globuslens.viewmodel.ProductDetailViewModel
 import com.globuslens.viewmodel.ResultViewModel
@@ -24,6 +27,8 @@ import com.globuslens.viewmodel.ShoppingListViewModel
 
 sealed class Screen(val route: String) {
 
+    object Settings : Screen("settings")
+    object BarcodeScanner : Screen("barcode_scanner")
     object PrivacyPolicy : Screen("privacy_policy")
     object Landing : Screen("landing")
     object Scanner : Screen("scanner")
@@ -39,6 +44,7 @@ sealed class Screen(val route: String) {
     companion object {
         val bottomNavigationScreens = listOf(
             Scanner.route,
+            BarcodeScanner.route,
             Favorites.route,
             ShoppingList.route
         )
@@ -49,7 +55,11 @@ sealed class Screen(val route: String) {
 fun NavGraph(
     navController: NavHostController = rememberNavController(),
     modifier: Modifier = Modifier,
-    startDestination: String = Screen.Landing.route
+    startDestination: String = Screen.Landing.route,
+    isDarkTheme: Boolean,
+    targetLanguage: String,
+    onThemeChange: (Boolean) -> Unit,
+    onLanguageChange: (String) -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -63,8 +73,30 @@ fun NavGraph(
                 navController = navController
             )
         }
+
+        // Privacy Policy Screen
         composable(Screen.PrivacyPolicy.route) {
             PrivacyPolicyScreen(navController = navController)
+        }
+
+        // Settings Screen - ADD THIS
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                navController = navController,
+                isDarkTheme = isDarkTheme,
+                currentLanguage = targetLanguage,
+                onThemeChange = onThemeChange,
+                onLanguageChange = onLanguageChange
+            )
+        }
+
+        // Barcode Scanner Screen
+        composable(Screen.BarcodeScanner.route) {
+            val viewModel: BarcodeScannerViewModel = hiltViewModel()
+            BarcodeScannerScreen(
+                navController = navController,
+                viewModel = viewModel
+            )
         }
 
         // Scanner Screen
@@ -96,7 +128,6 @@ fun NavGraph(
                     productId = productId
                 )
             } else {
-                // Navigate back if invalid productId
                 navController.popBackStack()
             }
         }
@@ -139,7 +170,6 @@ fun NavGraph(
                     productId = productId
                 )
             } else {
-                // Navigate back if invalid productId
                 navController.popBackStack()
             }
         }
@@ -153,6 +183,14 @@ fun NavHostController.navigateAndClearBackStack(route: String) {
             inclusive = true
         }
         launchSingleTop = true
+    }
+}
+
+// Extension function to navigate to settings
+fun NavHostController.navigateToSettings() {
+    navigate(Screen.Settings.route) {
+        launchSingleTop = true
+        restoreState = true
     }
 }
 
