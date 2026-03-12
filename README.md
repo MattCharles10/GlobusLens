@@ -95,6 +95,19 @@ app/
 
 ---
 
+## 🎥 App Demo
+
+
+<p align="center">
+  <video src="https://github.com/user-attachments/assets/a3bba75f-8b91-4492-873a-eb474f3b0774"
+         width="300"
+         controls>
+  </video>
+</p>
+
+
+---
+
 ### Installation
 
 Clone the repository
