@@ -24,5 +24,6 @@ data class Product(
     val barcode: String? = null,
     val isFavorite: Boolean = false,
     val scannedDate: Date = Date(),
-    val originalLanguage: String? = null
+    val originalLanguage: String? = null,
+    val targetLanguage: String? = null
 ) : Parcelable
