@@ -1,7 +1,7 @@
 package com.globuslens.network
 
-import com.globuslens.database.entities.LibreTranslateRequest
-import com.globuslens.database.entities.LibreTranslateResponse
+import com.globuslens.network.models.LibreTranslateRequest
+import com.globuslens.network.models.LibreTranslateResponse
 import retrofit2.http.Body
 import retrofit2.http.POST
 
