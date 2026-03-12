@@ -22,6 +22,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+
+
+
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -36,6 +40,12 @@ android {
     buildFeatures {
         compose = true
     }
+
+    defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+
 
     // This works with Kotlin 1.9.22
     composeOptions {
@@ -53,6 +63,9 @@ android {
 }
 
 dependencies {
+
+
+
     // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -71,12 +84,14 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
 
     // CameraX
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
+
 
     // Firebase - using stable BoM
     implementation(platform(libs.firebase.bom))
@@ -85,6 +100,13 @@ dependencies {
 
     // ML Kit
     implementation(libs.google.mlkit.text.recognition)
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
+    // Splash Screen API
+    implementation("androidx.core:core-splashscreen:1.0.1")
+
+    // Compose - foundation includes isSystemInDarkTheme
+    implementation(libs.androidx.compose.foundation)
 
     // Room
     implementation(libs.androidx.room.runtime)

@@ -8,7 +8,8 @@ data class LibreTranslateRequest(
     @SerializedName("q") val text : String ,
     @SerializedName("source") val source: String = "auto",
     @SerializedName("target") val target: String,
-    @SerializedName("format") val format: String = "text"
+    @SerializedName("format") val format: String = "text",
+    @SerializedName("api_key") val apiKey: String? = null
 )
 
 data class MyMemoryRequest(

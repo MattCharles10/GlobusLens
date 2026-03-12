@@ -3,7 +3,8 @@ package com.globuslens.database.entities
 import com.google.gson.annotations.SerializedName
 
 data class LibreTranslateResponse(
-    @SerializedName("translatedText") val translatedText: String
+    @SerializedName("translatedText") val translatedText: String,
+
 )
 
 data class MyMemoryResponse(
