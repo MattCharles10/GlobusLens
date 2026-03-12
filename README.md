@@ -2,7 +2,7 @@
 
 # GlobusLens - Smart Shopping Assistant 📱
 
-![Kotlin](https://img.shields.io/badge/Kotlin-2.0.0-blue.svg)
+![Kotlin](https://img.shields.io/badge/Kotlin-1.9.2-blue.svg)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%2520Compose-2024.04.01-brightgreen.svg)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 ![API Level](https://img.shields.io/badge/API-24%252B-brightgreen.svg?style=flat)
