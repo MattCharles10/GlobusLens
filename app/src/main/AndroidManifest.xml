@@ -22,11 +22,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
-        android:theme="@style/Theme.GlobusLens">
+        android:theme="@style/Theme.GlobusLens.Splash">
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:theme="@style/Theme.GlobusLens">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
