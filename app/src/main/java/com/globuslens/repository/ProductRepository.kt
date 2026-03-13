@@ -50,6 +50,14 @@ class ProductRepository @Inject constructor(
         }
     }
 
+    suspend fun getProductByBarcode(barcode: String): Product? {
+        return try {
+            productDao.getProductByBarcode(barcode)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     suspend fun updateProduct(product: Product): Resource<Unit> {
         return try {
             productDao.updateProduct(product)
