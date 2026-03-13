@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Original colors -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -27,4 +28,11 @@
     <color name="warning">#FFFFC107</color>
     <color name="error">#FFF44336</color>
     <color name="info">#FF2196F3</color>
+
+    <color name="background_dark">#FFF8F9FA</color>  <!-- Light mode fallback -->
+    <color name="surface_dark">#FFFFFFFF</color>     <!-- Light mode fallback -->
+    <color name="text_primary_dark">#FF212529</color> <!-- Light mode fallback -->
+    <color name="text_secondary_dark">#FF6C757D</color>
+    <color name="background_light">#FF121212</color>
+
 </resources>

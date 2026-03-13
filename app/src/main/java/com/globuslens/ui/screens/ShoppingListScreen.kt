@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Settings  // Add this import
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -112,6 +113,17 @@ fun ShoppingListScreen(
             TopAppBar(
                 title = { Text("Shopping List") },
                 actions = {
+                    // Settings icon - only in shopping list
+                    IconButton(
+                        onClick = { navController.navigate("settings") }
+                    ) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Settings"
+                        )
+                    }
+
+                    // Clear checked items icon (existing)
                     if (uiState.items.isNotEmpty()) {
                         IconButton(
                             onClick = { showClearDialog = true }

@@ -35,6 +35,13 @@ sealed class BottomNavItem(
         selectedIconId = R.drawable.ic_favorite_filled
     )
 
+    object BarcodeScanner : BottomNavItem(
+        route = "barcode_scanner",
+        title = "Barcode",
+        iconId = R.drawable.ic_barcode,
+        selectedIconId = R.drawable.ic_barcode_filled
+    )
+
     object ShoppingList : BottomNavItem(
         route = "shopping_list",
         title = "Shopping List",
@@ -52,6 +59,7 @@ fun BottomNavBar(
     val items = listOf(
         BottomNavItem.Scanner,
         BottomNavItem.Favorites,
+        BottomNavItem.BarcodeScanner,
         BottomNavItem.ShoppingList
     )
 

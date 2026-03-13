@@ -21,8 +21,7 @@ object Constants {
     // Translation
     const val DEFAULT_TARGET_LANG = "en"
     const val SOURCE_LANG_AUTO = "auto"
-    const val MY_MEMORY_EMAIL = "user@example.com" // Replace with your email
-
+    const val MY_MEMORY_EMAIL = "MAthew@example.com" // Replace with your email
     // Preferences
     const val PREF_NAME = "globuslens_prefs"
     const val PREF_FIRST_LAUNCH = "first_launch"
@@ -35,7 +34,31 @@ object Constants {
     const val SCAN_DELAY_MS = 2000L
     const val MIN_TEXT_LENGTH = 3
 
-    // Offline Dictionary
+    // Supported languages
+
+    val SUPPORTED_LANGUAGES = mapOf(
+        "en" to "English",
+        "es" to "Spanish",
+        "fr" to "French",
+        "de" to "German",
+        "it" to "Italian",
+        "pt" to "Portuguese",
+        "ru" to "Russian",
+        "zh" to "Chinese",
+        "ja" to "Japanese",
+        "ko" to "Korean",
+        "ar" to "Arabic",
+        "hi" to "Hindi",
+        "bn" to "Bengali",
+        "pa" to "Punjabi",
+        "ta" to "Tamil",
+        "te" to "Telugu",
+        "mr" to "Marathi",
+        "gu" to "Gujarati",
+        "kn" to "Kannada",
+        "ml" to "Malayalam"
+    )
+
     val OFFLINE_DICTIONARY = mapOf(
         "milk" to "moloko",
         "bread" to "khleb",
